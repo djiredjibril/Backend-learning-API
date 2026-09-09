@@ -1,0 +1,21 @@
+# Dépendances
+node_modules/
+npmcache/
+
+# Fichiers de base de données générés (SQLite)
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+
+# Variables d'environnement (identifiants MySQL/Postgres/MSSQL/Oracle à venir)
+.env
+.env.local
+
+# Logs
+npm-debug.log*
+*.log
+
+# OS / éditeur
+.DS_Store
+.vscode/
