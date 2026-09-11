@@ -11,7 +11,7 @@ const client = new userPackage.UserService(
 );
 
 // --- 1. Appel unaire classique (comme un GET REST) ---
-client.GetUser({ id: '4' }, (err, response) => {
+client.GetUser({ id: '2' }, (err, response) => {
   if (err) {
     console.error('Erreur GetUser:', err.message);
   } else {
@@ -29,5 +29,35 @@ client.GetUser({ id: '4' }, (err, response) => {
 
   call.on('end', () => {
     console.log('Flux terminé.');
+
+    // --- 3. UpdateUserName : mise à jour, on récupère l'objet à jour ---
+    console.log('\n--- UpdateUserName ---');
+    client.UpdateUserName({ id: '2', name: 'Koffi Mensah' }, (err, response) => {
+      if (err) {
+        console.error('Erreur UpdateUserName:', err.message);
+      } else {
+        console.log('Utilisateur mis à jour :', response);
+      }
+
+      // --- 4. CreatePost : "poster" depuis un user ---
+      console.log('\n--- CreatePost (cas normal) ---');
+      client.CreatePost({ authorId: '2', title: 'Mon premier post via gRPC' }, (err, post) => {
+        if (err) {
+          console.error('Erreur CreatePost:', err.message);
+        } else {
+          console.log('Post créé :', post);
+        }
+
+        // --- 5. CreatePost avec un authorId inexistant, pour voir l'erreur gérée ---
+        console.log('\n--- CreatePost (auteur inexistant) ---');
+        client.CreatePost({ authorId: '999', title: 'Post orphelin' }, (err, post) => {
+          if (err) {
+            console.error('Erreur attendue ->', err.message);
+          } else {
+            console.log('Post créé :', post);
+          }
+        });
+      });
+    });
   });
 });
