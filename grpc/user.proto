@@ -9,6 +9,14 @@ service UserService {
   // Streaming serveur : le serveur envoie plusieurs messages
   // pour UNE SEULE requête du client (ex: flux d'événements)
   rpc ListUsers (Empty) returns (stream UserResponse);
+
+  // Mise à jour : on ne renvoie pas juste un statut, mais l'utilisateur
+  // à jour en entier -- utile pour que le client n'ait pas besoin
+  // de refaire un GetUser juste après.
+  rpc UpdateUserName (UpdateUserNameRequest) returns (UserResponse);
+
+  // "Poster depuis un user" : créer un Post rattaché à un authorId.
+  rpc CreatePost (CreatePostRequest) returns (Post);
 }
 
 message UserRequest {
@@ -21,4 +29,20 @@ message UserResponse {
   string id = 1;
   string name = 2;
   string email = 3;
+}
+
+message UpdateUserNameRequest {
+  string id = 1;
+  string name = 2;
+}
+
+message CreatePostRequest {
+  string authorId = 1;
+  string title = 2;
+}
+
+message Post {
+  string id = 1;
+  string title = 2;
+  string authorId = 3;
 }
