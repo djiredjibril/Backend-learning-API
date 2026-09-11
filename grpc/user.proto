@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package user;
+
+service UserService {
+  // Appel classique requête/réponse (comme REST)
+  rpc GetUser (UserRequest) returns (UserResponse);
+
+  // Streaming serveur : le serveur envoie plusieurs messages
+  // pour UNE SEULE requête du client (ex: flux d'événements)
+  rpc ListUsers (Empty) returns (stream UserResponse);
+}
+
+message UserRequest {
+  string id = 1;
+}
+
+message Empty {}
+
+message UserResponse {
+  string id = 1;
+  string name = 2;
+  string email = 3;
+}
