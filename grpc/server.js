@@ -12,10 +12,13 @@ const users = [
   { id: '3', name: 'Fatou', email: 'fatou@example.com' },
 ];
 
+const posts = [
+  { id: '101', title: 'Découvrir gRPC', authorId: '1' },
+];
+let nextPostId = 102;
+
 // --- Implémentation des méthodes définies dans le .proto ---
 function GetUser(call, callback) {
-  console.log("call ", call, "call.request ", call.request);
-  
   const user = users.find((u) => u.id === call.request.id);
   if (!user) {
     return callback({ code: grpc.status.NOT_FOUND, message: 'Utilisateur introuvable' });
@@ -38,8 +41,48 @@ function ListUsers(call) {
   }, 300);
 }
 
+function UpdateUserName(call, callback) {
+  const user = users.find((u) => u.id === call.request.id);
+  if (!user) {
+    return callback({ code: grpc.status.NOT_FOUND, message: 'Utilisateur introuvable' });
+  }
+  // Petite validation : un champ vide n'a pas de sens ici.
+  if (!call.request.name || call.request.name.trim() === '') {
+    return callback({
+      code: grpc.status.INVALID_ARGUMENT,
+      message: 'Le nom ne peut pas être vide',
+    });
+  }
+  user.name = call.request.name;
+  callback(null, user); // on renvoie l'utilisateur à jour
+}
+
+function CreatePost(call, callback) {
+  const { authorId, title } = call.request;
+
+  // On vérifie que l'auteur existe réellement avant de créer le post
+  // -- exactement le même genre de contrôle qu'on ferait avec une
+  // contrainte de clé étrangère en base de données.
+  const author = users.find((u) => u.id === authorId);
+  if (!author) {
+    return callback({
+      code: grpc.status.NOT_FOUND,
+      message: `Aucun utilisateur avec l'id "${authorId}"`,
+    });
+  }
+
+  const newPost = { id: String(nextPostId++), title, authorId };
+  posts.push(newPost);
+  callback(null, newPost);
+}
+
 const server = new grpc.Server();
-server.addService(userPackage.UserService.service, { GetUser, ListUsers });
+server.addService(userPackage.UserService.service, {
+  GetUser,
+  ListUsers,
+  UpdateUserName,
+  CreatePost,
+});
 
 server.bindAsync('0.0.0.0:50051', grpc.ServerCredentials.createInsecure(), () => {
   console.log('Serveur gRPC prêt sur 0.0.0.0:50051');
