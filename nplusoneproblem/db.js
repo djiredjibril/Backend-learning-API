@@ -7,6 +7,15 @@ const pool = new pg.Pool({
   host: process.env.DB_HOST,
   database: process.env.DB_NAME,
   port: process.env.DB_PORT,
+  connectionTimeoutMillis: 5000,  // abandonne une tentative bloquée après 5s
+  max: 10,                          // nombre max de connexions simultanées
+});
+
+pool.on('error', (err) => {
+  console.error('Erreur inattendue du pool PostgreSQL:', err.message);
 });
 
 export default pool;
+
+
+
