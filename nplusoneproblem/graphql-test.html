@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Test GraphQL — nplusoneproblem</title>
+  <style>
+    body { font-family: monospace; max-width: 900px; margin: 40px auto; padding: 0 20px; }
+    textarea { width: 100%; height: 150px; font-family: monospace; font-size: 14px; }
+    button { padding: 10px 20px; font-size: 14px; cursor: pointer; margin-top: 10px; }
+    pre { background: #f4f4f4; padding: 15px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; }
+    .error { color: #c0392b; }
+  </style>
+</head>
+<body>
+  <h1>Test GraphQL — nplusoneproblem</h1>
+
+  <label for="endpoint">Endpoint :</label><br>
+  <input id="endpoint" type="text" value="http://localhost:4000/graphql" style="width: 100%; padding: 6px; margin-bottom: 15px;">
+
+  <label for="query">Requête GraphQL :</label>
+  <textarea id="query">query {
+  users {
+    name
+    posts {
+      title
+    }
+  }
+}</textarea>
+
+  <br>
+  <button onclick="runQuery()">Envoyer la requête</button>
+  <button onclick="document.getElementById('result').textContent = ''">Effacer le résultat</button>
+
+  <h3>Résultat :</h3>
+  <pre id="result">(rien pour l'instant)</pre>
+
+  <script>
+    async function runQuery() {
+      const endpoint = document.getElementById('endpoint').value;
+      const query = document.getElementById('query').value;
+      const resultEl = document.getElementById('result');
+      resultEl.textContent = 'Chargement...';
+      resultEl.classList.remove('error');
+
+      const start = performance.now();
+
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query }),
+        });
+
+        const data = await response.json();
+        const duration = (performance.now() - start).toFixed(0);
+
+        resultEl.textContent =
+          `Statut HTTP : ${response.status} — Temps : ${duration} ms\n\n` +
+          JSON.stringify(data, null, 2);
+      } catch (err) {
+        resultEl.classList.add('error');
+        resultEl.textContent = 'Erreur réseau : ' + err.message;
+      }
+    }
+  </script>
+</body>
+</html>
