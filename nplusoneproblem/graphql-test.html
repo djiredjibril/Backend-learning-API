@@ -6,9 +6,11 @@
   <style>
     body { font-family: monospace; max-width: 900px; margin: 40px auto; padding: 0 20px; }
     textarea { width: 100%; height: 150px; font-family: monospace; font-size: 14px; }
-    button { padding: 10px 20px; font-size: 14px; cursor: pointer; margin-top: 10px; }
+    select { width: 100%; padding: 8px; font-size: 14px; margin-bottom: 10px; }
+    button { padding: 10px 20px; font-size: 14px; cursor: pointer; margin-top: 10px; margin-right: 8px; }
     pre { background: #f4f4f4; padding: 15px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; }
     .error { color: #c0392b; }
+    .hint { color: #666; font-size: 13px; margin: 4px 0 12px; }
   </style>
 </head>
 <body>
@@ -16,6 +18,16 @@
 
   <label for="endpoint">Endpoint :</label><br>
   <input id="endpoint" type="text" value="http://localhost:4000/graphql" style="width: 100%; padding: 6px; margin-bottom: 15px;">
+
+  <label for="preset">Requêtes prédéfinies :</label>
+  <select id="preset" onchange="loadPreset()">
+    <option value="simple">1. Simple — users { name posts { title } }</option>
+    <option value="deep">2. Profonde — users → posts → comments → author (4 niveaux)</option>
+    <option value="authorOnly">3. Post.author seul — users { posts { author { name } } }</option>
+    <option value="usersOnly">4. Users seuls, sans relation (baseline, 1 requête attendue)</option>
+    <option value="custom">5. Personnalisée (édite librement ci-dessous)</option>
+  </select>
+  <div class="hint">Choisis une requête, ou passe sur "Personnalisée" pour écrire la tienne.</div>
 
   <label for="query">Requête GraphQL :</label>
   <textarea id="query">query {
@@ -35,6 +47,53 @@
   <pre id="result">(rien pour l'instant)</pre>
 
   <script>
+    const presets = {
+      simple: `query {
+  users {
+    name
+    posts {
+      title
+    }
+  }
+}`,
+      deep: `query {
+  users {
+    name
+    posts {
+      title
+      comments {
+        body
+        author {
+          name
+        }
+      }
+    }
+  }
+}`,
+      authorOnly: `query {
+  users {
+    posts {
+      author {
+        name
+      }
+    }
+  }
+}`,
+      usersOnly: `query {
+  users {
+    name
+    email
+  }
+}`,
+    };
+
+    function loadPreset() {
+      const key = document.getElementById('preset').value;
+      if (key !== 'custom' && presets[key]) {
+        document.getElementById('query').value = presets[key];
+      }
+    }
+
     async function runQuery() {
       const endpoint = document.getElementById('endpoint').value;
       const query = document.getElementById('query').value;
