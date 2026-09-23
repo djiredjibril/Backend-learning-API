@@ -1,6 +1,7 @@
 import { createSchema, createYoga } from 'graphql-yoga';
 import { createServer } from 'http';
 import pool from './db.js';
+import { createLoaders } from './loaders.js';
 
 const typeDefs = /* GraphQL */ `
   type User {
@@ -29,7 +30,6 @@ const typeDefs = /* GraphQL */ `
   }
 `;
 
-// --- Resolvers NAÏFS : une requête SQL séparée par relation, par élément ---
 const resolvers = {
   Query: {
     users: async () => {
@@ -39,19 +39,20 @@ const resolvers = {
   },
 
   User: {
-    posts: async (parent) => {
-      // Appelé une fois PAR USER renvoyé par Query.users -> c'est le piège N+1
-      const result = await pool.query(
-        'SELECT * FROM posts WHERE author_id = $1',
-        [parent.id]
-      );
-      return result.rows;
+    // AVANT (naïf) : une requête SQL par user
+    // posts: async (parent) => {
+    //   const result = await pool.query('SELECT * FROM posts WHERE author_id = $1', [parent.id]);
+    //   return result.rows;
+    // },
+
+    // APRÈS (DataLoader) : les appels sont groupés automatiquement
+    posts: async (parent, _args, context) => {
+      return context.loaders.postsByAuthorId.load(parent.id);
     },
   },
 
   Post: {
     author: async (parent) => {
-      // Appelé une fois PAR POST -> encore une requête séparée
       const result = await pool.query(
         'SELECT * FROM users WHERE id = $1',
         [parent.author_id]
@@ -59,7 +60,6 @@ const resolvers = {
       return result.rows[0];
     },
     comments: async (parent) => {
-      // Appelé une fois PAR POST -> encore une requête séparée
       const result = await pool.query(
         'SELECT * FROM comments WHERE post_id = $1',
         [parent.id]
@@ -70,7 +70,6 @@ const resolvers = {
 
   Comment: {
     author: async (parent) => {
-      // Appelé une fois PAR COMMENT -> encore une requête séparée
       const result = await pool.query(
         'SELECT * FROM users WHERE id = $1',
         [parent.author_id]
@@ -80,7 +79,16 @@ const resolvers = {
   },
 };
 
-const yoga = createYoga({ schema: createSchema({ typeDefs, resolvers }) });
+const yoga = createYoga({
+  schema: createSchema({ typeDefs, resolvers }),
+  // Le contexte est recréé à CHAQUE requête HTTP entrante -- donc
+  // createLoaders() est appelé à chaque fois, garantissant des loaders
+  // (et leur cache interne) neufs par requête, jamais partagés entre elles.
+  context: () => ({
+    loaders: createLoaders(),
+  }),
+});
+
 const server = createServer(yoga);
 
 server.listen(4000, () => {
