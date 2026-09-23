@@ -39,51 +39,29 @@ const resolvers = {
   },
 
   User: {
-    // AVANT (naïf) : une requête SQL par user
-    // posts: async (parent) => {
-    //   const result = await pool.query('SELECT * FROM posts WHERE author_id = $1', [parent.id]);
-    //   return result.rows;
-    // },
-
-    // APRÈS (DataLoader) : les appels sont groupés automatiquement
     posts: async (parent, _args, context) => {
       return context.loaders.postsByAuthorId.load(parent.id);
     },
   },
 
   Post: {
-    author: async (parent) => {
-      const result = await pool.query(
-        'SELECT * FROM users WHERE id = $1',
-        [parent.author_id]
-      );
-      return result.rows[0];
+    author: async (parent, _args, context) => {
+      return context.loaders.userById.load(parent.author_id);
     },
-    comments: async (parent) => {
-      const result = await pool.query(
-        'SELECT * FROM comments WHERE post_id = $1',
-        [parent.id]
-      );
-      return result.rows;
+    comments: async (parent, _args, context) => {
+      return context.loaders.commentsByPostId.load(parent.id);
     },
   },
 
   Comment: {
-    author: async (parent) => {
-      const result = await pool.query(
-        'SELECT * FROM users WHERE id = $1',
-        [parent.author_id]
-      );
-      return result.rows[0];
+    author: async (parent, _args, context) => {
+      return context.loaders.userById.load(parent.author_id);
     },
   },
 };
 
 const yoga = createYoga({
   schema: createSchema({ typeDefs, resolvers }),
-  // Le contexte est recréé à CHAQUE requête HTTP entrante -- donc
-  // createLoaders() est appelé à chaque fois, garantissant des loaders
-  // (et leur cache interne) neufs par requête, jamais partagés entre elles.
   context: () => ({
     loaders: createLoaders(),
   }),

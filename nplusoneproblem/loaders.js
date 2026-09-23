@@ -1,24 +1,49 @@
 import DataLoader from 'dataloader';
 import pool from './db.js';
 
-// Un loader "par requête HTTP" -- cette fonction sera appelée à chaque
-// nouvelle requête GraphQL entrante, jamais réutilisée entre deux requêtes
-// différentes (sinon risque de fuite de cache entre utilisateurs).
 export function createLoaders() {
   const postsByAuthorId = new DataLoader(async (authorIds) => {
-    console.log('DataLoader batch -- author_ids demandés:', authorIds);
+    console.log('Batch postsByAuthorId --', authorIds.length, 'ids:', authorIds);
 
     const result = await pool.query(
       'SELECT * FROM posts WHERE author_id = ANY($1)',
       [authorIds]
     );
 
-    // DataLoader exige qu'on renvoie un tableau dans LE MÊME ORDRE
-    // que les clés reçues -- un groupBy + remise en ordre est nécessaire.
     return authorIds.map((id) =>
       result.rows.filter((post) => post.author_id === id)
     );
   });
 
-  return { postsByAuthorId };
+  // Partagé par Post.author ET Comment.author -- les deux cherchent
+  // un user par id, donc un seul loader suffit pour les deux resolvers.
+  const userById = new DataLoader(async (userIds) => {
+    console.log('Batch userById --', userIds.length, 'ids:', userIds);
+
+    const result = await pool.query(
+      'SELECT * FROM users WHERE id = ANY($1)',
+      [userIds]
+    );
+
+    // Ici chaque id correspond à EXACTEMENT un user (pas une liste) --
+    // on utilise .find() au lieu de .filter(), et undefined si jamais absent.
+    return userIds.map((id) =>
+      result.rows.find((user) => user.id === id)
+    );
+  });
+
+  const commentsByPostId = new DataLoader(async (postIds) => {
+    console.log('Batch commentsByPostId --', postIds.length, 'ids:', postIds);
+
+    const result = await pool.query(
+      'SELECT * FROM comments WHERE post_id = ANY($1)',
+      [postIds]
+    );
+
+    return postIds.map((id) =>
+      result.rows.filter((comment) => comment.post_id === id)
+    );
+  });
+
+  return { postsByAuthorId, userById, commentsByPostId };
 }
